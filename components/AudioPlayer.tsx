@@ -46,14 +46,15 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ isPlaying, volume, url, onErr
               await playPromise.catch((error) => {
                 if (isCancelled) return;
                 
+                // Detailed promise error logging
+                console.error(`Audio Play Promise Error: ${error.name} - ${error.message} (Code: ${(error as any).code || 'N/A'})`);
+
                 if (error.name === 'NotAllowedError') {
                   console.warn("🔇 Autoplay Blocked. User needs to interact with the document first.");
                   if (onError) onError();
                 } else if (error.name === 'AbortError') {
                   // Safe ignore: occurs if pause() is called while loading
-                  console.debug("Playback aborted (safely)");
                 } else {
-                  console.error("Audio Play Promise Error:", error);
                   if (onError) onError();
                 }
               });
@@ -87,12 +88,13 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ isPlaying, volume, url, onErr
       playsInline
       preload="auto"
       className="hidden"
-      crossOrigin="anonymous" 
+      // Removed crossOrigin="anonymous" to fix GitHub raw content CORS issues
       onError={(e) => {
         const target = e.currentTarget;
-        const errorMessage = target.error ? target.error.message : "Unknown Error";
-        const errorCode = target.error ? target.error.code : "N/A";
-        console.error(`Audio Resource Error: ${errorMessage} (Code: ${errorCode}) | URL: ${target.src}`);
+        const error = target.error;
+        // Fix: Log as string to avoid [object Object] output in some consoles
+        const errorMsg = error ? `${error.message} (Code: ${error.code})` : "Unknown Error";
+        console.error(`Audio Resource Error: ${errorMsg} | URL: ${target.src}`);
         
         if (onError) onError();
       }}

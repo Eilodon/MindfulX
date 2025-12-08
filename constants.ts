@@ -11,22 +11,23 @@ export const COLORS = {
   GlassBorder: 'rgba(255, 255, 255, 0.6)',
 };
 
-// Using Verified Raw GitHub MP3 Assets (Lofi Club) to ensure direct access and no CORS/hotlink issues
+// Using raw.githack.com to serve files with correct Content-Type (audio/mpeg)
+// This resolves "MEDIA_ELEMENT_ERROR: Format error" caused by raw.githubusercontent.com's text/plain headers
 export const TRACKS = [
   { 
     id: 'rain', 
     name: 'Soft Rain', 
-    url: 'https://raw.githubusercontent.com/lofi-club/lofi-club/main/public/sounds/rain.mp3' 
+    url: 'https://raw.githack.com/lofi-club/lofi-club/main/public/sounds/rain.mp3' 
   },
   { 
     id: 'forest', 
     name: 'Morning Forest', 
-    url: 'https://raw.githubusercontent.com/lofi-club/lofi-club/main/public/sounds/birds.mp3' 
+    url: 'https://raw.githack.com/lofi-club/lofi-club/main/public/sounds/birds.mp3' 
   },
   { 
     id: 'ocean', 
     name: 'Ocean Waves', 
-    url: 'https://raw.githubusercontent.com/lofi-club/lofi-club/main/public/sounds/ocean.mp3' 
+    url: 'https://raw.githack.com/lofi-club/lofi-club/main/public/sounds/ocean.mp3' 
   }
 ];
 
