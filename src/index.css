@@ -1,0 +1,18 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global Styles for Scrollbars & Selection */
+@layer base {
+  body {
+    @apply antialiased text-[#2D2A26];
+    background-color: #FFF8E7; /* Fallback */
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  ::selection {
+    background-color: #D87C4A;
+    color: white;
+  }
+}
