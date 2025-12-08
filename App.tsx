@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import BreathingBackground, { UrgencyLevel } from './components/BreathingBackground';
 import WisdomCard from './components/WisdomCard';
@@ -8,30 +7,34 @@ import AudioPlayer from './components/AudioPlayer';
 import { generateZenGuidance } from './services/geminiService';
 import { ZenResponse, UIState, Language } from './types';
 import { COLORS, TRACKS, TRANSLATIONS } from './constants';
-import { Volume2, VolumeX, Music, ListMusic, Play, Pause, Globe } from 'lucide-react';
+import { Volume2, Music, ListMusic, Play, Pause, Globe } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const App: React.FC = () => {
+  // --- Core UI State ---
   const [uiState, setUiState] = useState<UIState>(UIState.IDLE);
   const [zenData, setZenData] = useState<ZenResponse | null>(null);
   const [thoughtTrace, setThoughtTrace] = useState<string | null>(null);
   
-  // App Settings
+  // --- App Settings ---
   const [language, setLanguage] = useState<Language>('en');
 
-  // Agentic States
+  // --- Agentic States ---
   const [showTimer, setShowTimer] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   
-  // Music Panel UI State
-  const [showMusicControls, setShowMusicControls] = useState(false);
+  // --- Refs ---
+  const thinkingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
+  
+  // --- Music Panel UI State ---
+  const [showMusicControls, setShowMusicControls] = useState(false);
 
   const t = TRANSLATIONS[language];
 
-  // Derive urgency from zenData
+  // 2. Derive urgency from zenData
   const urgency: UrgencyLevel = useMemo(() => {
     if (!zenData) return 'low';
     const realm = zenData.realm.toLowerCase();
@@ -43,7 +46,7 @@ const App: React.FC = () => {
     return 'low';
   }, [zenData]);
 
-  // Handle click outside to auto-fade/close controls
+  // 3. Handle click outside to auto-fade/close controls
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (controlsRef.current && !controlsRef.current.contains(event.target as Node)) {
@@ -80,11 +83,15 @@ const App: React.FC = () => {
     const thoughts = t.analyzing;
     setThoughtTrace(thoughts[0]);
 
-    // Fix: Use functional state update pattern to prevent closure staleness
-    // This ensures we always have the fresh state when calculating the next index
-    const thoughtInterval = setInterval(() => {
+    // 🐛 BUG FIX: Clear any existing interval
+    if (thinkingIntervalRef.current) clearInterval(thinkingIntervalRef.current);
+
+    // 🐛 BUG FIX: Use Functional State Update inside interval
+    thinkingIntervalRef.current = setInterval(() => {
       setThoughtTrace((currentTrace) => {
-        const currentIndex = currentTrace ? thoughts.indexOf(currentTrace) : 0;
+        // Handle case where state might be null initially
+        const currentTraceSafe = currentTrace || thoughts[0];
+        const currentIndex = thoughts.indexOf(currentTraceSafe);
         const nextIndex = (currentIndex + 1) % thoughts.length;
         return thoughts[nextIndex];
       });
@@ -93,7 +100,7 @@ const App: React.FC = () => {
     try {
       const response = await generateZenGuidance(text, language);
       
-      clearInterval(thoughtInterval);
+      if (thinkingIntervalRef.current) clearInterval(thinkingIntervalRef.current);
       
       if (response.thought_trace) {
          setThoughtTrace(response.thought_trace);
@@ -108,7 +115,7 @@ const App: React.FC = () => {
 
     } catch (error) {
       console.error(error);
-      clearInterval(thoughtInterval); // Ensure interval is cleared on error
+      if (thinkingIntervalRef.current) clearInterval(thinkingIntervalRef.current);
       setThoughtTrace(t.errorGeneric);
       setTimeout(() => setUiState(UIState.IDLE), 3000);
     }
@@ -141,14 +148,16 @@ const App: React.FC = () => {
         language={language}
       />
 
-      {/* Language Switcher (Top Left) */}
-      <button
-        onClick={() => setLanguage(l => l === 'en' ? 'vi' : 'en')}
-        className="absolute top-6 left-6 z-50 flex items-center space-x-2 px-3 py-2 rounded-full bg-white/30 backdrop-blur-md border border-white/40 shadow-sm hover:bg-white/40 transition-all text-[#2D2A26] font-medium text-sm"
-      >
-        <Globe className="w-4 h-4 opacity-70" />
-        <span>{language === 'en' ? 'EN' : 'VN'}</span>
-      </button>
+      {/* Top Left Controls: Language */}
+      <div className="absolute top-6 left-6 z-50 flex items-center space-x-2">
+        <button
+          onClick={() => setLanguage(l => l === 'en' ? 'vi' : 'en')}
+          className="flex items-center space-x-2 px-3 py-2 rounded-full bg-white/30 backdrop-blur-md border border-white/40 shadow-sm hover:bg-white/40 transition-all text-[#2D2A26] font-medium text-sm"
+        >
+          <Globe className="w-4 h-4 opacity-70" />
+          <span>{language === 'en' ? 'EN' : 'VN'}</span>
+        </button>
+      </div>
 
       {/* 4. Music Controls & Library Panel (Top Right) */}
       <div 

@@ -11,23 +11,24 @@ export const COLORS = {
   GlassBorder: 'rgba(255, 255, 255, 0.6)',
 };
 
-// Using raw.githack.com to serve files with correct Content-Type (audio/mpeg)
-// This resolves "MEDIA_ELEMENT_ERROR: Format error" caused by raw.githubusercontent.com's text/plain headers
+// 🛡️ STABILITY: Switched from flaky external URLs to internal synthesis presets
+// "forest" -> "bowl" (Singing Bowl is easier to synthesize procedurally and fits the vibe)
+// "ocean" -> "wind" (Brown noise fits both)
 export const TRACKS = [
   { 
     id: 'rain', 
     name: 'Soft Rain', 
-    url: 'https://raw.githack.com/lofi-club/lofi-club/main/public/sounds/rain.mp3' 
+    url: 'synth:rain' 
   },
   { 
-    id: 'forest', 
-    name: 'Morning Forest', 
-    url: 'https://raw.githack.com/lofi-club/lofi-club/main/public/sounds/birds.mp3' 
+    id: 'bowl', 
+    name: 'Singing Bowl', 
+    url: 'synth:bowl' 
   },
   { 
-    id: 'ocean', 
-    name: 'Ocean Waves', 
-    url: 'https://raw.githack.com/lofi-club/lofi-club/main/public/sounds/ocean.mp3' 
+    id: 'wind', 
+    name: 'Eternal Wind', 
+    url: 'synth:wind' 
   }
 ];
 
