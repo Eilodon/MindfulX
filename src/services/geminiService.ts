@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Modality } from "@google/genai";
 import { SYSTEM_PROMPT } from "../constants";
 import { ZenResponse, Language, ChatMessage } from "../types";
@@ -32,13 +31,12 @@ const decodeAudioData = async (
 export const generateZenGuidance = async (
   userInput: string, 
   language: Language,
-  apiKey: string,
   history: string[] = [],
   imageBase64?: string | null,
   isVoiceInput: boolean = false
 ): Promise<ZenResponse> => {
   
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   // Context Construction
   const historyContext = history.length > 0 
@@ -97,11 +95,10 @@ export const generateChatResponse = async (
     history: ChatMessage[],
     newMessage: string,
     image: string | null,
-    apiKey: string,
     language: Language,
     useSearch: boolean
 ): Promise<{ text: string, groundingMetadata?: any }> => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // FEATURE: Search Grounding uses gemini-2.5-flash
     // FEATURE: Complex Chat uses gemini-3-pro-preview
@@ -145,10 +142,9 @@ export const generateChatResponse = async (
 
 export const generateSpeech = async (
     text: string, 
-    apiKey: string,
     language: Language
 ): Promise<AudioBuffer> => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // FEATURE: Text-to-Speech using gemini-2.5-flash-preview-tts
     const response = await ai.models.generateContent({

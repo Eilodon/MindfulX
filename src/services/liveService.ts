@@ -6,19 +6,17 @@ export class LiveSessionManager {
   private inputContext: AudioContext | null = null;
   private inputProcessor: ScriptProcessorNode | null = null;
   private stream: MediaStream | null = null;
-  private apiKey: string;
   private onAudioData: (buffer: AudioBuffer) => void;
   private nextStartTime = 0;
   private audioQueue: AudioBufferSourceNode[] = [];
 
-  constructor(apiKey: string, onAudioData: (buffer: AudioBuffer) => void) {
-    this.apiKey = apiKey;
+  constructor(onAudioData: (buffer: AudioBuffer) => void) {
     this.onAudioData = onAudioData;
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
   }
 
   async connect() {
-    const ai = new GoogleGenAI({ apiKey: this.apiKey });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Clean up previous stream/session if any
     if (this.stream) this.disconnect();

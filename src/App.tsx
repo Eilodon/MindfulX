@@ -1,23 +1,23 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import BreathingBackground, { UrgencyLevel } from './components/BreathingBackground';
 import WisdomCard from './components/WisdomCard';
 import InputArea from './components/InputArea';
 import TimerOverlay from './components/TimerOverlay';
 import AudioPlayer from './components/AudioPlayer';
-import ApiKeyModal from './components/ApiKeyModal';
 import { generateZenGuidance, generateChatResponse, generateSpeech } from './services/geminiService';
 import { LiveSessionManager } from './services/liveService';
 import { ZenResponse, UIState, Language, AppMode, ChatMessage } from './types';
 import { COLORS, TRACKS, TRANSLATIONS } from './constants';
-import { Volume2, Music, ListMusic, Play, Pause, Globe, KeyRound, VolumeX, Volume2 as VolumeIcon, ExternalLink } from 'lucide-react';
+import { Volume2, Music, ListMusic, Play, Pause, Globe, VolumeX, Volume2 as VolumeIcon, ExternalLink } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+
+// Cast motion components to any to avoid strict type checking issues with IntrinsicAttributes in some environments
+const MotionDiv = motion.div as any;
 
 const App: React.FC = () => {
   // --- Security & Auth State ---
-  const [apiKey, setApiKey] = useState<string>('');
-  const [showKeyModal, setShowKeyModal] = useState(false);
-
+  // API key is handled via process.env.API_KEY in services
+  
   // --- Core UI State ---
   const [uiState, setUiState] = useState<UIState>(UIState.IDLE);
   const [mode, setMode] = useState<AppMode>('ZEN');
@@ -53,16 +53,8 @@ const App: React.FC = () => {
 
   const t = TRANSLATIONS[language];
 
-  // 1. Initialize API Key & History
+  // 1. Initialize History
   useEffect(() => {
-    const storedKey = localStorage.getItem('mindful_api_key');
-    if (storedKey) {
-      setApiKey(storedKey);
-      setShowKeyModal(false);
-    } else {
-      setShowKeyModal(true);
-    }
-
     const storedHistory = localStorage.getItem('mindful_history');
     if (storedHistory) {
       try {
@@ -80,25 +72,11 @@ const App: React.FC = () => {
     // TODO: Cancel Gemini TTS AudioContext if implemented with stop()
   }, [language]);
 
-  const handleSaveKey = (key: string) => {
-    setApiKey(key);
-    localStorage.setItem('mindful_api_key', key);
-    setShowKeyModal(false);
-  };
-
-  const handleResetKey = () => {
-    localStorage.removeItem('mindful_api_key');
-    setApiKey('');
-    setShowKeyModal(true);
-    setZenData(null);
-    setUiState(UIState.IDLE);
-  };
-
   // 2. Gemini 2.5 TTS Logic
   const playGeminiTTS = async (text: string) => {
-    if (!isTtsEnabled || !apiKey) return;
+    if (!isTtsEnabled) return;
     try {
-        const audioBuffer = await generateSpeech(text, apiKey, language);
+        const audioBuffer = await generateSpeech(text, language);
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const source = ctx.createBufferSource();
         source.buffer = audioBuffer;
@@ -151,11 +129,6 @@ const App: React.FC = () => {
 
   // --- MAIN ANALYSIS HANDLER ---
   const handleAnalyze = async (text: string, imageBase64?: string | null, isVoiceInput?: boolean) => {
-    if (!apiKey) {
-      setShowKeyModal(true);
-      return;
-    }
-
     if (mode === 'CHAT') {
         setUiState(UIState.CHATTING);
         const newUserMsg: ChatMessage = { role: 'user', text, image: imageBase64 };
@@ -163,7 +136,7 @@ const App: React.FC = () => {
         setChatHistory(updatedHistory);
 
         try {
-            const response = await generateChatResponse(updatedHistory, text, imageBase64 || null, apiKey, language, useSearch);
+            const response = await generateChatResponse(updatedHistory, text, imageBase64 || null, language, useSearch);
             const newModelMsg: ChatMessage = { 
                 role: 'model', 
                 text: response.text, 
@@ -197,7 +170,7 @@ const App: React.FC = () => {
     }, 1500);
 
     try {
-      const response = await generateZenGuidance(text, language, apiKey, history, imageBase64, isVoiceInput);
+      const response = await generateZenGuidance(text, language, history, imageBase64, isVoiceInput);
       
       if (thinkingIntervalRef.current) clearInterval(thinkingIntervalRef.current);
       
@@ -235,11 +208,10 @@ const App: React.FC = () => {
           setUiState(UIState.IDLE);
       } else {
           // Start Live
-          if (!apiKey) return setShowKeyModal(true);
           setMode('LIVE');
           setUiState(UIState.LIVE_SESSION);
           try {
-            liveSessionRef.current = new LiveSessionManager(apiKey, (buffer) => {
+            liveSessionRef.current = new LiveSessionManager((buffer) => {
                 // Visualizer hook could go here
             });
             await liveSessionRef.current.connect();
@@ -265,9 +237,6 @@ const App: React.FC = () => {
           background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
       `}</style>
-
-      {/* Security Layer */}
-      <ApiKeyModal isOpen={showKeyModal} onSave={handleSaveKey} />
 
       {/* Background Layer */}
       <BreathingBackground 
@@ -299,16 +268,6 @@ const App: React.FC = () => {
           <Globe className="w-4 h-4 opacity-70" />
           <span>{language === 'en' ? 'EN' : 'VN'}</span>
         </button>
-
-        {!showKeyModal && (
-          <button
-            onClick={handleResetKey}
-            title="Reset API Key"
-            className="p-2 rounded-full bg-white/30 backdrop-blur-md border border-white/40 shadow-sm hover:bg-white/40 transition-all text-[#2D2A26]"
-          >
-            <KeyRound className="w-4 h-4 opacity-70" />
-          </button>
-        )}
       </div>
 
       {/* Top Right: Music */}
@@ -328,7 +287,7 @@ const App: React.FC = () => {
 
         <AnimatePresence>
           {showMusicControls && (
-            <motion.div
+            <MotionDiv
               initial={{ opacity: 0, scale: 0.9, y: -10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -10 }}
@@ -380,7 +339,7 @@ const App: React.FC = () => {
                   </button>
                 ))}
               </div>
-            </motion.div>
+            </MotionDiv>
           )}
         </AnimatePresence>
       </div>
@@ -408,12 +367,12 @@ const App: React.FC = () => {
                     language={language}
                 />
                  {uiState === UIState.SHOWING_WISDOM && zenData && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute bottom-0 right-0 transform translate-y-full pt-2">
+                    <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute bottom-0 right-0 transform translate-y-full pt-2">
                     <button onClick={() => setIsTtsEnabled(!isTtsEnabled)} className="flex items-center space-x-2 bg-white/40 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-medium text-[#2D2A26]/70 hover:bg-white/60 transition-colors shadow-sm">
                         {isTtsEnabled ? <VolumeIcon className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
                         <span>Voice</span>
                     </button>
-                    </motion.div>
+                    </MotionDiv>
                 )}
             </>
           )}
@@ -455,7 +414,7 @@ const App: React.FC = () => {
           {/* LIVE MODE VISUALIZER */}
           {mode === 'LIVE' && (
               <div className="flex flex-col items-center justify-center h-full">
-                  <motion.div 
+                  <MotionDiv 
                     animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     className="w-40 h-40 rounded-full bg-gradient-to-br from-[#D87C4A] to-purple-500 blur-2xl"

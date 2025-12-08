@@ -10,6 +10,9 @@ import { COLORS, TRACKS, TRANSLATIONS } from './constants';
 import { Volume2, Music, ListMusic, Play, Pause, Globe } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
+// Cast motion components to any to avoid strict type checking issues with IntrinsicAttributes in some environments
+const MotionDiv = motion.div as any;
+
 const App: React.FC = () => {
   // --- Core UI State ---
   const [uiState, setUiState] = useState<UIState>(UIState.IDLE);
@@ -179,7 +182,7 @@ const App: React.FC = () => {
         {/* Expandable Control Panel */}
         <AnimatePresence>
           {showMusicControls && (
-            <motion.div
+            <MotionDiv
               initial={{ opacity: 0, scale: 0.9, y: -10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -10 }}
@@ -240,7 +243,7 @@ const App: React.FC = () => {
                 ))}
               </div>
 
-            </motion.div>
+            </MotionDiv>
           )}
         </AnimatePresence>
       </div>
