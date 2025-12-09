@@ -1,1 +1,1 @@
-// MOVED TO src/types.ts
+// DELETED: Please use src/types.ts

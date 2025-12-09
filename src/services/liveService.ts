@@ -12,7 +12,15 @@ export class LiveSessionManager {
 
   constructor(onAudioData: (buffer: AudioBuffer) => void) {
     this.onAudioData = onAudioData;
-    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    
+    // Cross-browser AudioContext initialization
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    // Attempt to set sample rate, but fallback if not supported
+    try {
+        this.audioContext = new AudioContextClass({ sampleRate: 24000 });
+    } catch (e) {
+        this.audioContext = new AudioContextClass();
+    }
   }
 
   async connect(apiKey: string) {
@@ -21,6 +29,9 @@ export class LiveSessionManager {
     
     // Clean up previous stream/session if any
     if (this.stream) this.disconnect();
+
+    // Reset cursor
+    this.nextStartTime = 0;
 
     const sessionPromise = ai.live.connect({
       model: 'gemini-2.5-flash-native-audio-preview-09-2025',
@@ -50,35 +61,44 @@ export class LiveSessionManager {
   }
 
   private async setupAudioInput(sessionPromise: Promise<any>) {
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio: {
-        sampleRate: 16000,
-        channelCount: 1,
-        echoCancellation: true
-    }});
-    
-    this.inputContext = new AudioContext({ sampleRate: 16000 });
-    const source = this.inputContext.createMediaStreamSource(this.stream);
-    
-    // Send PCM data in chunks
-    this.inputProcessor = this.inputContext.createScriptProcessor(4096, 1, 1);
-    this.inputProcessor.onaudioprocess = (e) => {
-        const inputData = e.inputBuffer.getChannelData(0);
-        // Convert Float32 to Int16 PCM for Gemini
-        const pcmData = this.floatTo16BitPCM(inputData);
-        const base64 = this.arrayBufferToBase64(pcmData);
+    try {
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: {
+            sampleRate: 16000,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true
+        }});
+        
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        this.inputContext = new AudioContextClass({ sampleRate: 16000 });
+        
+        const source = this.inputContext.createMediaStreamSource(this.stream);
+        
+        // Send PCM data in chunks using ScriptProcessor (widest support)
+        // Note: AudioWorklet is preferred for production, but ScriptProcessor fits single-file constraints.
+        this.inputProcessor = this.inputContext.createScriptProcessor(4096, 1, 1);
+        this.inputProcessor.onaudioprocess = (e) => {
+            const inputData = e.inputBuffer.getChannelData(0);
+            // Convert Float32 to Int16 PCM for Gemini
+            const pcmData = this.floatTo16BitPCM(inputData);
+            const base64 = this.arrayBufferToBase64(pcmData);
 
-        sessionPromise.then(session => {
-            session.sendRealtimeInput({
-                media: {
-                    mimeType: "audio/pcm;rate=16000",
-                    data: base64
-                }
+            sessionPromise.then(session => {
+                session.sendRealtimeInput({
+                    media: {
+                        mimeType: "audio/pcm;rate=16000",
+                        data: base64
+                    }
+                });
             });
-        });
-    };
+        };
 
-    source.connect(this.inputProcessor);
-    this.inputProcessor.connect(this.inputContext.destination);
+        source.connect(this.inputProcessor);
+        this.inputProcessor.connect(this.inputContext.destination);
+    } catch (e) {
+        console.error("Microphone setup failed", e);
+        throw e;
+    }
   }
 
   private playAudio(buffer: AudioBuffer) {
@@ -87,7 +107,7 @@ export class LiveSessionManager {
     source.connect(this.audioContext.destination);
     
     const currentTime = this.audioContext.currentTime;
-    // Schedule next chunk
+    // Schedule next chunk. If we fell behind, start immediately.
     if (this.nextStartTime < currentTime) {
         this.nextStartTime = currentTime;
     }
@@ -112,6 +132,12 @@ export class LiveSessionManager {
     if (this.client && typeof this.client.close === 'function') {
         this.client.close();
     }
+    
+    // Stop all playing audio
+    this.audioQueue.forEach(s => {
+        try { s.stop(); } catch(e){}
+    });
+    this.audioQueue = [];
   }
 
   // UTILS

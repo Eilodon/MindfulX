@@ -1,1 +1,1 @@
-// MOVED TO src/constants.ts
+// DELETED: Please use src/constants.ts

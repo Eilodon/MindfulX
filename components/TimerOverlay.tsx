@@ -1,1 +1,1 @@
-// MOVED TO src/components/TimerOverlay.tsx
+// DELETED: Please use src/components/TimerOverlay.tsx

@@ -1,1 +1,1 @@
-// MOVED TO src/components/InputArea.tsx
+// DELETED: Please use src/components/InputArea.tsx

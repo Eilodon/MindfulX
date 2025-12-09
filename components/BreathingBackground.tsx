@@ -1,1 +1,1 @@
-// MOVED TO src/components/BreathingBackground.tsx
+// DELETED: Please use src/components/BreathingBackground.tsx

@@ -1,1 +1,1 @@
-// MOVED TO src/components/WisdomCard.tsx
+// DELETED: Please use src/components/WisdomCard.tsx

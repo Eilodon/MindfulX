@@ -1,2 +1,1 @@
-// MOVED TO src/App.tsx
-export default function App() { return null; }
+// DELETED: Please use src/App.tsx

@@ -1,1 +1,1 @@
-// MOVED TO src/services/geminiService.ts
+// DELETED: Please use src/services/geminiService.ts

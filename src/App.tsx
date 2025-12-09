@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Volume2, Music, ListMusic, Play, Pause, Globe, VolumeX, Volume2 as VolumeIcon, ExternalLink } from 'lucide-react';
+import { Music, ListMusic, Play, Pause, Globe, VolumeX, Volume2 as VolumeIcon, ExternalLink } from 'lucide-react';
 
 // Hooks
 import { useZenMode } from './hooks/useZenMode';
@@ -124,22 +124,21 @@ const App: React.FC = () => {
           try {
             await liveSession.connect(apiKey);
           } catch (e) {
+              console.error("Live Session Failed", e);
               setMode('ZEN');
+              zen.setUiState(UIState.IDLE);
           }
       }
   };
 
   // --- Render ---
   return (
-    <div className="relative w-full h-screen flex flex-col items-center justify-between overflow-hidden">
+    <div className="relative w-full h-screen flex flex-col items-center justify-between overflow-hidden bg-[#FFF8E7]">
       
       <ApiKeyModal isOpen={showKeyModal} onSave={handleSaveKey} />
 
-      {/* Noise Texture */}
-      <div className="bg-noise fixed inset-0 z-50 opacity-[0.05] pointer-events-none mix-blend-multiply" />
-      <style>{`
-        .bg-noise { background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"); }
-      `}</style>
+      {/* Noise Texture (Handled in CSS now) */}
+      <div className="bg-noise" />
 
       {/* Background & Audio */}
       <BreathingBackground 
@@ -202,7 +201,7 @@ const App: React.FC = () => {
               </div>
               <div className="mb-4">
                  <div className="flex items-center justify-between text-xs opacity-60 mb-1">
-                    <Volume2 className="w-3 h-3" />
+                    <VolumeIcon className="w-3 h-3" />
                     <span>{Math.round(audio.volume * 100)}%</span>
                  </div>
                  <input type="range" min="0" max="1" step="0.01" value={audio.volume} onChange={(e) => audio.setVolume(parseFloat(e.target.value))} className="w-full h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-[#8DA399]" />
