@@ -11,10 +11,6 @@ interface WisdomCardProps {
   language: Language;
 }
 
-// Cast motion components to any to avoid strict type checking issues with IntrinsicAttributes in some environments
-const MotionDiv = motion.div as any;
-const MotionP = motion.p as any;
-
 const WisdomCard: React.FC<WisdomCardProps> = ({ data, thoughtTrace, isVisible, language }) => {
   const isThinking = !data && thoughtTrace;
   const t = TRANSLATIONS[language];
@@ -22,7 +18,7 @@ const WisdomCard: React.FC<WisdomCardProps> = ({ data, thoughtTrace, isVisible, 
   return (
     <AnimatePresence mode="wait">
       {(isVisible || isThinking) && (
-        <MotionDiv
+        <motion.div
           key={data ? "wisdom" : "thinking"}
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -41,21 +37,21 @@ const WisdomCard: React.FC<WisdomCardProps> = ({ data, thoughtTrace, isVisible, 
             {/* State 1: Thinking / Monologue */}
             {isThinking && (
               <div className="flex flex-col items-center justify-center py-10 h-full">
-                <MotionDiv 
+                <motion.div 
                   animate={{ rotate: 360 }}
                   transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
                   className="mb-6"
                 >
                   <Wind className="w-8 h-8 text-[#8DA399] opacity-80" />
-                </MotionDiv>
-                <MotionP 
+                </motion.div>
+                <motion.p 
                   key={thoughtTrace}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="font-zen text-2xl italic text-[#D87C4A]"
                 >
                   "{thoughtTrace}"
-                </MotionP>
+                </motion.p>
               </div>
             )}
 
@@ -63,7 +59,7 @@ const WisdomCard: React.FC<WisdomCardProps> = ({ data, thoughtTrace, isVisible, 
             {data && (
               <div className="w-full flex flex-col h-full">
                 {/* Header (Fixed) */}
-                <MotionDiv 
+                <motion.div 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
@@ -79,7 +75,7 @@ const WisdomCard: React.FC<WisdomCardProps> = ({ data, thoughtTrace, isVisible, 
                   >
                     {t.realmPrefix}: {data.realm}
                   </span>
-                </MotionDiv>
+                </motion.div>
 
                 <div className="flex-shrink-0">
                   <p className="text-xs font-bold text-[#8DA399] uppercase tracking-wider mb-2">
@@ -97,28 +93,28 @@ const WisdomCard: React.FC<WisdomCardProps> = ({ data, thoughtTrace, isVisible, 
                 {/* Footer / Action Indicator (Fixed) */}
                 <div className="flex justify-center items-center space-x-4 border-t border-gray-200/30 pt-4 flex-shrink-0 mt-auto">
                   {data.action_intent === 'SET_ALARM' && (
-                    <MotionDiv 
+                    <motion.div 
                       initial={{ scale: 0 }} animate={{ scale: 1 }}
                       className="flex items-center space-x-2 text-[#D87C4A] text-sm font-medium bg-orange-50 px-3 py-1 rounded-full"
                     >
                       <Bell className="w-4 h-4" />
                       <span>{t.actionTimer}</span>
-                    </MotionDiv>
+                    </motion.div>
                   )}
                   {data.action_intent === 'PLAY_SOUND' && (
-                    <MotionDiv 
+                    <motion.div 
                       initial={{ scale: 0 }} animate={{ scale: 1 }}
                       className="flex items-center space-x-2 text-[#8DA399] text-sm font-medium bg-green-50 px-3 py-1 rounded-full"
                     >
                       <Music className="w-4 h-4" />
                       <span>{t.actionSound}</span>
-                    </MotionDiv>
+                    </motion.div>
                   )}
                 </div>
               </div>
             )}
           </div>
-        </MotionDiv>
+        </motion.div>
       )}
     </AnimatePresence>
   );

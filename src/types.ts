@@ -33,3 +33,5 @@ export enum UIState {
 export type Language = 'en' | 'vi';
 
 export type AppMode = 'ZEN' | 'CHAT' | 'LIVE';
+
+export type UrgencyLevel = 'low' | 'medium' | 'high';

@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI, Modality, Type, Schema } from "@google/genai";
 import { SYSTEM_PROMPT } from "../constants";
 import { ZenResponse, Language, ChatMessage } from "../types";
 
@@ -13,18 +13,33 @@ const decodeAudioData = async (
   for (let i = 0; i < len; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
-  // Gemini TTS output is raw PCM 24kHz mono usually, but the API returns a container sometimes.
-  // Ideally we use decodeAudioData on the array buffer.
-  // However, the GenAI SDK for TTS returns specific encoded data.
-  // For simplicity with standard formats (if requested) or raw, let's try standard decode first.
-  
-  // Note: If raw PCM is returned without header, standard decodeAudioData might fail. 
-  // But standard gemini-2.5-flash-preview-tts often returns usable audio data or we configure it.
-  // Let's assume standard behavior for now, or raw PCM decoding if needed.
-  
   return await audioContext.decodeAudioData(bytes.buffer);
 };
 
+// --- SCHEMA DEFINITION ---
+const ZenResponseSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    thought_trace: {
+      type: Type.STRING,
+      description: "A brief internal monologue (under 15 words) observing the user's state.",
+    },
+    realm: {
+      type: Type.STRING,
+      description: "The detected emotional state (1-3 words).",
+    },
+    advice: {
+      type: Type.STRING,
+      description: "Profound, calming teaching in the voice of a Zen Master.",
+    },
+    action_intent: {
+      type: Type.STRING,
+      enum: ["SET_ALARM", "PLAY_SOUND", "NONE"],
+      description: "Action trigger: SET_ALARM for meditation, PLAY_SOUND for stress relief, NONE otherwise.",
+    },
+  },
+  required: ["thought_trace", "realm", "advice", "action_intent"],
+};
 
 // --- SERVICE FUNCTIONS ---
 
@@ -32,11 +47,13 @@ export const generateZenGuidance = async (
   userInput: string, 
   language: Language,
   history: string[] = [],
-  imageBase64?: string | null,
-  isVoiceInput: boolean = false
+  imageBase64: string | null | undefined,
+  isVoiceInput: boolean = false,
+  apiKey: string
 ): Promise<ZenResponse> => {
   
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  if (!apiKey) throw new Error("API Key is required");
+  const ai = new GoogleGenAI({ apiKey });
 
   // Context Construction
   const historyContext = history.length > 0 
@@ -61,33 +78,43 @@ export const generateZenGuidance = async (
     const parts: any[] = [{ text: userInput }];
 
     if (imageBase64) {
-      const [header, data] = imageBase64.split(',');
-      const mimeType = header.match(/:(.*?);/)?.[1] || 'image/png';
-      parts.push({ inlineData: { mimeType, data } });
+      // Clean base64 if needed
+      const cleanBase64 = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+      // Detect mimeType or default to jpeg
+      const mimeMatch = imageBase64.match(/:(.*?);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+      
+      parts.push({ inlineData: { mimeType, data: cleanBase64 } });
     }
 
-    // FEATURE: Image Analysis using gemini-3-pro-preview
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview', 
+      model: 'gemini-2.5-flash', 
       contents: { role: 'user', parts },
       config: {
         systemInstruction: fullSystemPrompt,
         responseMimeType: "application/json",
+        responseSchema: ZenResponseSchema,
         temperature: 0.7,
       },
     });
 
-    let text = response.text;
+    const text = response.text;
     if (!text) throw new Error("The Master is silent.");
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) text = jsonMatch[0];
-
-    return JSON.parse(text);
+    return JSON.parse(text) as ZenResponse;
 
   } catch (error) {
     console.error("Gemini Zen Error", error);
-    throw error;
+    
+    // Fallback "Safe Mode" Response
+    return {
+      thought_trace: language === 'vi' ? "Gió đang đổi chiều..." : "The wind is changing...",
+      realm: language === 'vi' ? "Cảnh giới Vô Thường" : "Unknown Realm",
+      advice: language === 'vi' 
+        ? "Hít vào, thở ra. Ngay cả khi tâm trí rối bời, hơi thở vẫn luôn ở đó."
+        : "Breathe in, breathe out. Even when clarity is lost, the breath remains.",
+      action_intent: "NONE"
+    };
   }
 };
 
@@ -96,12 +123,12 @@ export const generateChatResponse = async (
     newMessage: string,
     image: string | null,
     language: Language,
-    useSearch: boolean
+    useSearch: boolean,
+    apiKey: string
 ): Promise<{ text: string, groundingMetadata?: any }> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    if (!apiKey) throw new Error("API Key is required");
+    const ai = new GoogleGenAI({ apiKey });
     
-    // FEATURE: Search Grounding uses gemini-2.5-flash
-    // FEATURE: Complex Chat uses gemini-3-pro-preview
     const modelName = useSearch ? 'gemini-2.5-flash' : 'gemini-3-pro-preview';
     
     const systemInstruction = language === 'vi'
@@ -109,17 +136,20 @@ export const generateChatResponse = async (
         : "You are a wise Zen Master. Answer concisely, profoundly, and compassionately.";
 
     // Convert internal history to API format
-    const contents = history.map(msg => ({
-        role: msg.role,
-        parts: msg.image 
-            ? [{ text: msg.text }, { inlineData: { mimeType: 'image/jpeg', data: msg.image.split(',')[1] } }]
-            : [{ text: msg.text }]
-    }));
+    const contents = history.map(msg => {
+        const parts: any[] = [{ text: msg.text }];
+        if (msg.image) {
+             const cleanBase64 = msg.image.includes(',') ? msg.image.split(',')[1] : msg.image;
+             parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } });
+        }
+        return { role: msg.role, parts };
+    });
 
     // Add new message
     const newParts: any[] = [{ text: newMessage }];
     if (image) {
-        newParts.push({ inlineData: { mimeType: 'image/jpeg', data: image.split(',')[1] } });
+        const cleanBase64 = image.includes(',') ? image.split(',')[1] : image;
+        newParts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } });
     }
     contents.push({ role: 'user', parts: newParts });
 
@@ -142,11 +172,12 @@ export const generateChatResponse = async (
 
 export const generateSpeech = async (
     text: string, 
-    language: Language
+    language: Language,
+    apiKey: string
 ): Promise<AudioBuffer> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    if (!apiKey) throw new Error("API Key is required");
+    const ai = new GoogleGenAI({ apiKey });
     
-    // FEATURE: Text-to-Speech using gemini-2.5-flash-preview-tts
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-preview-tts',
         contents: {
@@ -158,8 +189,6 @@ export const generateSpeech = async (
             speechConfig: {
                 voiceConfig: {
                     prebuiltVoiceConfig: {
-                        // Aoede is calm/deep, good for Zen. 
-                        // Using 'Kore' or 'Fenrir' as alternatives if needed.
                         voiceName: 'Aoede' 
                     }
                 }
@@ -171,8 +200,5 @@ export const generateSpeech = async (
     if (!base64Audio) throw new Error("No audio generated");
 
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    
-    // For the specific TTS model, we might need to handle raw PCM or encoded. 
-    // The current preview usually returns a format decodeAudioData handles (WAV container wrapped).
     return await decodeAudioData(base64Audio, audioCtx);
 };

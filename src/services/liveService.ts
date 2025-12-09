@@ -15,8 +15,9 @@ export class LiveSessionManager {
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
   }
 
-  async connect() {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  async connect(apiKey: string) {
+    if (!apiKey) throw new Error("API Key required");
+    const ai = new GoogleGenAI({ apiKey });
     
     // Clean up previous stream/session if any
     if (this.stream) this.disconnect();

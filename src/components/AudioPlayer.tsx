@@ -16,18 +16,35 @@ class ZenSynth {
   currentType: string | null = null;
 
   constructor() {
-    const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
-    if (AudioContextClass) {
-      this.ctx = new AudioContextClass();
-      this.masterGain = this.ctx.createGain();
-      this.masterGain.connect(this.ctx.destination);
+    // Intentionally empty. Context is initialized lazily in init()
+  }
+
+  init() {
+    if (!this.ctx) {
+        const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
+        if (AudioContextClass) {
+            this.ctx = new AudioContextClass();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.connect(this.ctx.destination);
+        }
+    }
+  }
+
+  async resume() {
+    this.init();
+    if (this.ctx && this.ctx.state === 'suspended') {
+        try {
+            await this.ctx.resume();
+        } catch (e) {
+            console.warn("Audio Context Resume Warning", e);
+        }
     }
   }
 
   setVolume(val: number) {
-    if (this.masterGain) {
+    if (this.masterGain && this.ctx) {
       // Smooth volume transition
-      this.masterGain.gain.setTargetAtTime(val, this.ctx?.currentTime || 0, 0.1);
+      this.masterGain.gain.setTargetAtTime(val, this.ctx.currentTime, 0.1);
     }
   }
 
@@ -92,16 +109,13 @@ class ZenSynth {
   }
 
   play(type: string) {
+    this.resume(); // Explicitly resume context
+    
     if (!this.ctx || !this.masterGain) return;
-    if (this.currentType === type) return;
+    if (this.currentType === type && this.ctx.state === 'running') return;
 
     this.stop(); // Stop previous
     this.currentType = type;
-
-    // Resume context if suspended (browser autoplay policy)
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
 
     if (type.includes('rain')) {
       const noise = this.createPinkNoise();

@@ -8,9 +8,6 @@ interface ApiKeyModalProps {
   onSave: (key: string) => void;
 }
 
-// Cast motion components to any to avoid strict type checking issues with IntrinsicAttributes in some environments
-const MotionDiv = motion.div as any;
-
 const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onSave }) => {
   const [inputKey, setInputKey] = useState('');
   const [error, setError] = useState('');
@@ -28,7 +25,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onSave }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <MotionDiv
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -38,7 +35,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onSave }) => {
           {/* Backdrop Blur */}
           <div className="absolute inset-0 backdrop-blur-md" />
 
-          <MotionDiv
+          <motion.div
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl"
@@ -78,14 +75,14 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onSave }) => {
                 </div>
 
                 {error && (
-                  <MotionDiv 
+                  <motion.div 
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     className="flex items-center space-x-2 text-red-500 text-xs px-2"
                   >
                     <AlertCircle className="w-3 h-3" />
                     <span>{error}</span>
-                  </MotionDiv>
+                  </motion.div>
                 )}
 
                 <button
@@ -113,8 +110,8 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onSave }) => {
             
             {/* Decorative bottom bar */}
             <div className="h-2 w-full bg-gradient-to-r from-[#8DA399] via-[#D87C4A] to-[#8DA399] opacity-30" />
-          </MotionDiv>
-        </MotionDiv>
+          </motion.div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

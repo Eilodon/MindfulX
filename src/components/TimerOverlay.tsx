@@ -11,9 +11,6 @@ interface TimerOverlayProps {
   language: Language;
 }
 
-// Cast motion components to any to avoid strict type checking issues with IntrinsicAttributes in some environments
-const MotionDiv = motion.div as any;
-
 const TimerOverlay: React.FC<TimerOverlayProps> = ({ isOpen, onClose, durationSeconds = 300, language }) => {
   const [timeLeft, setTimeLeft] = useState(durationSeconds);
   const t = TRANSLATIONS[language];
@@ -43,7 +40,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ isOpen, onClose, durationSe
   return (
     <AnimatePresence>
       {isOpen && (
-        <MotionDiv
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -58,7 +55,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ isOpen, onClose, durationSe
             <X className="w-8 h-8" style={{ color: COLORS.InkBlack }} />
           </button>
 
-          <MotionDiv
+          <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, type: 'spring' }}
@@ -70,13 +67,13 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ isOpen, onClose, durationSe
 
             {/* Breathing Circle Indicator */}
             <div className="relative flex items-center justify-center w-80 h-80 mb-8">
-              <MotionDiv
+              <motion.div
                 className="absolute inset-0 rounded-full opacity-20"
                 style={{ backgroundColor: COLORS.SageGreen }}
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               />
-               <MotionDiv
+               <motion.div
                 className="absolute inset-4 rounded-full border-2 opacity-30"
                 style={{ borderColor: COLORS.MonkRobe }}
                 animate={{ scale: [1, 1.05, 1], rotate: 180 }}
@@ -91,8 +88,8 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ isOpen, onClose, durationSe
             <p className="text-lg opacity-60 font-light max-w-xs" style={{ color: COLORS.InkBlack }}>
               {timeLeft === 0 ? t.timerComplete : t.timerInstruction}
             </p>
-          </MotionDiv>
-        </MotionDiv>
+          </motion.div>
+        </motion.div>
       )}
     </AnimatePresence>
   );
